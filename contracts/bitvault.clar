@@ -248,3 +248,44 @@
     (ok true)
   )
 )
+
+(define-public (redeem-stablecoin 
+  (vault-owner principal)
+  (vault-id uint)
+  (redeem-amount uint)
+)
+  (let
+    (
+      (is-valid-vault-id 
+        (and 
+          (> vault-id u0)
+          (<= vault-id (var-get vault-counter))
+        )
+      )
+      (vault 
+        (unwrap! 
+          (map-get? vaults {owner: vault-owner, id: vault-id}) 
+          ERR-INVALID-PARAMETERS
+        )
+      )
+    )
+    (asserts! is-valid-vault-id ERR-INVALID-PARAMETERS)
+    (asserts! (is-eq tx-sender vault-owner) ERR-UNAUTHORIZED-VAULT-ACTION)
+    (asserts! (> redeem-amount u0) ERR-INVALID-PARAMETERS)
+    (asserts! 
+      (<= redeem-amount (get stablecoin-minted vault)) 
+      ERR-INSUFFICIENT-BALANCE
+    )
+    (map-set vaults {owner: vault-owner, id: vault-id}
+      {
+        collateral-amount: (get collateral-amount vault),
+        stablecoin-minted: (- (get stablecoin-minted vault) redeem-amount),
+        created-at: (get created-at vault)
+      }
+    )
+    (var-set total-supply 
+      (- (var-get total-supply) redeem-amount)
+    )
+    (ok true)
+  )
+)
